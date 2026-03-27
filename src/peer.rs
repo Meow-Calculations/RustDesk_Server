@@ -38,7 +38,7 @@ pub(crate) struct Peer {
     // pub(crate) user: Option<Vec<u8>>,
     pub(crate) info: PeerInfo,
     // pub(crate) disabled: bool,
-    pub(crate) reg_pk: (u32, Instant), // how often register_pk
+    pub(crate) reg_pk: (u32, Instant), // 注册 pk 的频率记录
 }
 
 impl Default for Peer {

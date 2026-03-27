@@ -121,7 +121,7 @@ pub fn gen_sk(wait: u64) -> (String, Option<sign::SecretKey>) {
                 log::info!("Private key comes from {}", sk_file);
                 return (pk, Some(sign::SecretKey(tmp)));
             } else {
-                // don't use log here, since it is async
+                // 这里不使用 log，因为它是异步的
                 println!("Fatal error: malformed private key in {sk_file}.");
                 std::process::exit(1);
             }

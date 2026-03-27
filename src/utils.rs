@@ -93,8 +93,8 @@ fn doctor_ip(server_ip_address: std::net::IpAddr, server_address: Option<&str>) 
     println!("Is IPV4: {}", server_ip_address.is_ipv4());
     println!("Is IPV6: {}", server_ip_address.is_ipv6());
 
-    // reverse dns lookup
-    // TODO: (check) doesn't seem to do reverse lookup on OSX...
+    // 反向 DNS 查找
+    // TODO: (检查) 在 macOS 上似乎不进行反向查找...
     let reverse = lookup_addr(&server_ip_address).unwrap();
     if let Some(server_address) = server_address {
         if reverse == server_address {
@@ -106,17 +106,17 @@ fn doctor_ip(server_ip_address: std::net::IpAddr, server_address: Option<&str>) 
         }
     }
 
-    // TODO: ICMP ping?
+    // TODO: ICMP ping 检测?
 
-    // port check TCP (UDP is hard to check)
+    // 端口检查 TCP（UDP 难以检查）
     doctor_tcp(server_ip_address, "21114", "API");
-    doctor_tcp(server_ip_address, "21115", "hbbs extra port for nat test");
+    doctor_tcp(server_ip_address, "21115", "hbbs NAT 检测额外端口");
     doctor_tcp(server_ip_address, "21116", "hbbs");
     doctor_tcp(server_ip_address, "21117", "hbbr tcp");
     doctor_tcp(server_ip_address, "21118", "hbbs websocket");
     doctor_tcp(server_ip_address, "21119", "hbbr websocket");
 
-    // TODO: key check
+    // TODO: 密钥检查
 }
 
 fn doctor(server_address_unclean: &str) {
@@ -125,10 +125,10 @@ fn doctor(server_address_unclean: &str) {
     let server_address = server_address2.as_str();
     println!("Checking server:  {server_address}\n");
     if let Ok(server_ipaddr) = server_address.parse::<IpAddr>() {
-        // user requested an ip address
+        // 用户请求的是 IP 地址
         doctor_ip(server_ipaddr, None);
     } else {
-        // the passed string is not an ip address
+        // 传入的字符串不是 IP 地址
         let ips: Vec<std::net::IpAddr> = lookup_host(server_address).unwrap();
         println!("Found {} IP addresses: ", ips.len());
 

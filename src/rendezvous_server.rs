@@ -61,9 +61,9 @@ type RelayServers = Vec<String>;
 const CHECK_RELAY_TIMEOUT: u64 = 3_000;
 static ALWAYS_USE_RELAY: AtomicBool = AtomicBool::new(false);
 
-// Store punch hole requests
+// 存储打洞请求记录
 use once_cell::sync::Lazy;
-use tokio::sync::Mutex as TokioMutex; // differentiate if needed
+use tokio::sync::Mutex as TokioMutex; // 如需要可以区分不同的 Mutex
 #[derive(Clone)]
 struct PunchReqEntry { tm: Instant, from_ip: String, to_ip: String, to_id: String }
 static PUNCH_REQS: Lazy<TokioMutex<Vec<PunchReqEntry>>> = Lazy::new(|| TokioMutex::new(Vec::new()));
@@ -269,7 +269,7 @@ impl RendezvousServer {
                             return LoopFailure::UdpSocket;
                         }
                         None => {
-                            // unreachable!() ?
+                            // 理论上不可达！
                         }
                     }
                 }
@@ -324,7 +324,7 @@ impl RendezvousServer {
         if let Ok(msg_in) = RendezvousMessage::parse_from_bytes(bytes) {
             match msg_in.union {
                 Some(rendezvous_message::Union::RegisterPeer(rp)) => {
-                    // B registered
+                    // B 端已注册
                     if !rp.id.is_empty() {
                         log::trace!("New peer registered: {:?} {:?}", &rp.id, &addr);
                         self.update_addr(rp.id, addr, socket).await?;
@@ -428,7 +428,7 @@ impl RendezvousServer {
                     if self.pm.is_in_memory(&ph.id).await {
                         self.handle_udp_punch_hole_request(addr, ph, key).await?;
                     } else {
-                        // not in memory, fetch from db with spawn in case blocking me
+                        // 不在内存中，使用 spawn 从数据库获取以避免阻塞当前任务
                         let mut me = self.clone();
                         let key = key.to_owned();
                         tokio::spawn(async move {
@@ -491,7 +491,7 @@ impl RendezvousServer {
         if let Ok(msg_in) = RendezvousMessage::parse_from_bytes(bytes) {
             match msg_in.union {
                 Some(rendezvous_message::Union::PunchHoleRequest(ph)) => {
-                    // there maybe several attempt, so sink can be none
+                    // 可能有多次尝试，所以 sink 可能为 None
                     if let Some(sink) = sink.take() {
                         self.tcp_punch.lock().await.insert(try_into_v4(addr), sink);
                     }
@@ -499,7 +499,7 @@ impl RendezvousServer {
                     return true;
                 }
                 Some(rendezvous_message::Union::RequestRelay(mut rf)) => {
-                    // there maybe several attempt, so sink can be none
+                    // 可能有多次尝试，所以 sink 可能为 None
                     if let Some(sink) = sink.take() {
                         self.tcp_punch.lock().await.insert(try_into_v4(addr), sink);
                     }
@@ -523,7 +523,7 @@ impl RendezvousServer {
                     let mut msg_out = RendezvousMessage::new();
                     if !rr.relay_server.is_empty() {
                         if self.is_lan(addr_b) {
-                            // https://github.com/rustdesk/rustdesk-server/issues/24
+                            // 参见 https://github.com/rustdesk/rustdesk-server/issues/24
                             rr.relay_server = self.inner.local_ip.clone();
                         } else if rr.relay_server == self.inner.local_ip {
                             rr.relay_server = self.get_relay_server(addr.ip(), addr_b.ip());
@@ -619,7 +619,7 @@ impl RendezvousServer {
         addr: SocketAddr,
         socket: Option<&'a mut FramedSocket>,
     ) -> ResultType<()> {
-        // punch hole sent from B, tell A that B is ready to be connected
+        // B 端发送的打洞已发送消息，通知 A 端 B 已准备好被连接
         let addr_a = AddrMangle::decode(&phs.socket_addr);
         log::debug!(
             "{} punch hole response to {:?} from {:?}",
@@ -653,7 +653,7 @@ impl RendezvousServer {
         addr: SocketAddr,
         socket: Option<&'a mut FramedSocket>,
     ) -> ResultType<()> {
-        // relay local addrs of B to A
+        // 将 B 端的局域网地址中转给 A 端
         let addr_a = AddrMangle::decode(&la.socket_addr);
         log::debug!(
             "{} local addrs response to {:?} from {:?}",
@@ -697,11 +697,11 @@ impl RendezvousServer {
             return Ok((msg_out, None));
         }
         let id = ph.id;
-        // punch hole request from A, relay to B,
-        // check if in same intranet first,
-        // fetch local addrs if in same intranet.
-        // because punch hole won't work if in the same intranet,
-        // all routers will drop such self-connections.
+        // A 端发送的打洞请求，中转给 B 端。
+        // 首先检查是否在同一内网，
+        // 如果在同一内网，则获取局域网地址。
+        // 因为打洞在同一内网内无法工作，
+        // 所有路由器都会丢弃这样的自连接。
         if let Some(peer) = self.pm.get(&id).await {
             let (elapsed, peer_addr) = {
                 let r = peer.read().await;
@@ -716,14 +716,14 @@ impl RendezvousServer {
                 return Ok((msg_out, None));
             }
             
-            // record punch hole request (from addr -> peer id/peer_addr)
+            // 记录打洞请求（从 addr -> 对端 id/对端地址）
             {
                 let from_ip = try_into_v4(addr).ip().to_string();
                 let to_ip = try_into_v4(peer_addr).ip().to_string();
                 let to_id_clone = id.clone();
                 let mut lock = PUNCH_REQS.lock().await;
                 let mut dup = false;
-                for e in lock.iter().rev().take(30) { // only check recent tail subset for speed
+                for e in lock.iter().rev().take(30) { // 为提高速度，只检查最近的尾部子集
                     if e.from_ip == from_ip && e.to_id == to_id_clone {
                         if e.tm.elapsed().as_secs() < PUNCH_REQ_DEDUPE_SEC { dup = true; }
                         break;
@@ -738,10 +738,10 @@ impl RendezvousServer {
             let mut relay_server = self.get_relay_server(addr.ip(), peer_addr.ip());
             if ALWAYS_USE_RELAY.load(Ordering::SeqCst) || (peer_is_lan ^ is_lan) {
                 if peer_is_lan {
-                    // https://github.com/rustdesk/rustdesk-server/issues/24
+                    // 参见 https://github.com/rustdesk/rustdesk-server/issues/24
                     relay_server = self.inner.local_ip.clone()
                 }
-                ph.nat_type = NatType::SYMMETRIC.into(); // will force relay
+                ph.nat_type = NatType::SYMMETRIC.into(); // 将强制使用中继
             }
             let same_intranet: bool = !ws
                 && (peer_is_lan && is_lan || {
@@ -799,7 +799,7 @@ impl RendezvousServer {
         for (i, peer_id) in peers.iter().enumerate() {
             if let Some(peer) = self.pm.get_in_memory(peer_id).await {
                 let elapsed = peer.read().await.last_reg_time.elapsed().as_millis() as i32;
-                // bytes index from left to right
+                // 字节索引从左到右
                 let states_idx = i / 8;
                 let bit_idx = 7 - i % 8;
                 if elapsed < REG_TIMEOUT {
@@ -1299,7 +1299,7 @@ async fn check_relay_servers(rs0: Arc<RelayServers>, tx: Sender) {
     }
 }
 
-// temp solution to solve udp socket failure
+// 临时方案，用于解决 UDP 套接字失败问题
 async fn test_hbbs(addr: SocketAddr) -> ResultType<()> {
     let mut addr = addr;
     if addr.ip().is_unspecified() {

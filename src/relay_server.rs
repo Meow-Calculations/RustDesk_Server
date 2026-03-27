@@ -37,11 +37,11 @@ lazy_static::lazy_static! {
     static ref BLOCKLIST: RwLock<HashSet<String>> = Default::default();
 }
 
-static DOWNGRADE_THRESHOLD_100: AtomicUsize = AtomicUsize::new(66); // 0.66
-static DOWNGRADE_START_CHECK: AtomicUsize = AtomicUsize::new(1_800_000); // in ms
-static LIMIT_SPEED: AtomicUsize = AtomicUsize::new(32 * 1024 * 1024); // in bit/s
-static TOTAL_BANDWIDTH: AtomicUsize = AtomicUsize::new(1024 * 1024 * 1024); // in bit/s
-static SINGLE_BANDWIDTH: AtomicUsize = AtomicUsize::new(128 * 1024 * 1024); // in bit/s
+static DOWNGRADE_THRESHOLD_100: AtomicUsize = AtomicUsize::new(66); // 0.66、降级阈值百分比
+static DOWNGRADE_START_CHECK: AtomicUsize = AtomicUsize::new(1_800_000); // 单位：毫秒
+static LIMIT_SPEED: AtomicUsize = AtomicUsize::new(32 * 1024 * 1024); // 单位：bit/s
+static TOTAL_BANDWIDTH: AtomicUsize = AtomicUsize::new(1024 * 1024 * 1024); // 单位：bit/s
+static SINGLE_BANDWIDTH: AtomicUsize = AtomicUsize::new(128 * 1024 * 1024); // 单位：bit/s
 const BLACKLIST_FILE: &str = "blacklist.txt";
 const BLOCKLIST_FILE: &str = "blocklist.txt";
 
@@ -480,7 +480,7 @@ async fn relay(
     let limiter = <Limiter>::new(sb);
     let blacklist_limiter = <Limiter>::new(LIMIT_SPEED.load(Ordering::SeqCst) as _);
     let downgrade_threshold =
-        (sb * DOWNGRADE_THRESHOLD_100.load(Ordering::SeqCst) as f64 / 100. / 1000.) as usize; // in bit/ms
+        (sb * DOWNGRADE_THRESHOLD_100.load(Ordering::SeqCst) as f64 / 100. / 1000.) as usize; // 单位：bit/ms
     let mut timer = interval(Duration::from_secs(3));
     let mut last_recv_time = std::time::Instant::now();
     loop {
@@ -621,7 +621,7 @@ impl StreamTrait for tokio_tungstenite::WebSocketStream<TcpStream> {
                 Ok(msg) => {
                     match msg {
                         tungstenite::Message::Binary(bytes) => {
-                            Some(Ok(bytes[..].into())) // to-do: poor performance
+                            Some(Ok(bytes[..].into())) // 待优化：性能较差
                         }
                         _ => Some(Ok(BytesMut::new())),
                     }
@@ -636,7 +636,7 @@ impl StreamTrait for tokio_tungstenite::WebSocketStream<TcpStream> {
     async fn send_raw(&mut self, bytes: Bytes) -> ResultType<()> {
         Ok(self
             .send(tungstenite::Message::Binary(bytes.to_vec()))
-            .await?) // to-do: poor performance
+            .await?) // 待优化：性能较差
     }
 
     fn is_ws(&self) -> bool {

@@ -62,7 +62,7 @@ impl Database {
             },
             n,
         );
-        let _ = pool.get().await?; // test
+        let _ = pool.get().await?; // 测试连接是否正常
         let db = Database { pool };
         db.create_tables().await?;
         Ok(db)

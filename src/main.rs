@@ -1,5 +1,5 @@
-// https://tools.ietf.org/rfc/rfc5128.txt
-// https://blog.csdn.net/bytxl/article/details/44344855
+// 参见 https://tools.ietf.org/rfc/rfc5128.txt
+// 参见 https://blog.csdn.net/bytxl/article/details/44344855
 
 use flexi_logger::*;
 use hbb_common::{bail, config::RENDEZVOUS_PORT, ResultType};
