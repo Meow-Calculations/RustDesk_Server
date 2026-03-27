@@ -1,0 +1,30 @@
+[package]
+name = "rawne"
+version = "0.1.0"
+edition = "2021"
+description = "RustDesk Advanced Weak-Network Engine (RAWNE) - 次世代弱网远控核心引擎"
+authors = ["AcmeCloud Engineering Team"]
+license = "AGPL-3.0"
+
+[features]
+default = ["fec"]
+# FEC 前向纠错功能（需要 reed-solomon-erasure）
+# 客户端启用，服务端可选择不启用以避免依赖冲突
+fec = ["reed-solomon-erasure"]
+
+[dependencies]
+# 日志框架
+log = "0.4"
+
+# 高精度时间
+instant = "0.1"
+
+# Reed-Solomon 前向纠错（可选依赖，通过 fec feature 启用）
+reed-solomon-erasure = { version = "6.0", optional = true }
+
+# 序列化 (用于配置与探针协议)
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+env_logger = "0.11"
