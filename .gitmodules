@@ -1,3 +1,5 @@
 [submodule "libs/hbb_common"]
 	path = libs/hbb_common
-	url = https://cnb.cool/acmecloud/Meow-Calculations/RustDesk_Hbb_Common
+	url = https://github.com/Meow-Calculations/RustDesk_Hbb_Common.git
+# 注释: 原 CNB 仓库路径
+# url = https://cnb.cool/acmecloud/Meow-Calculations/RustDesk_Hbb_Common
