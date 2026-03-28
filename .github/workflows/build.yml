@@ -19,7 +19,6 @@ jobs:
       matrix:
         target:
           - x86_64-unknown-linux-gnu
-          - aarch64-unknown-linux-gnu
     steps:
       - name: Checkout source code
         uses: actions/checkout@v6
@@ -28,12 +27,6 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install cross
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Install dependencies
         run: |
@@ -41,17 +34,11 @@ jobs:
           sudo apt-get install -y libsqlite3-dev libssl-dev pkg-config
 
       - uses: Swatinem/rust-cache@v2
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
         with:
           prefix-key: server-${{ matrix.target }}
 
-      - name: Build (native)
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+      - name: Build
         run: cargo build --release
-
-      - name: Build (cross)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: cross build --release --target ${{ matrix.target }}
 
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
@@ -60,11 +47,8 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: rustdesk-server-${{ matrix.target }}
+          name: rustdesk-server-linux-x86_64
           path: |
-            target/${{ matrix.target }}/release/hbbs
-            target/${{ matrix.target }}/release/hbbr
-            target/${{ matrix.target }}/release/rustdesk-utils
             target/release/hbbs
             target/release/hbbr
             target/release/rustdesk-utils
