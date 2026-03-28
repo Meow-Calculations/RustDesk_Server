@@ -34,6 +34,7 @@ const MAX_REFRESH_RATE: u32 = 240;
 const GRACEFUL_TEARDOWN_TIMEOUT_MS: u64 = 3_000;
 
 /// 网络恢复后刷新率回升步进（Hz）
+#[allow(dead_code)]
 const REFRESH_RATE_RECOVERY_STEP: u32 = 15;
 
 // ---------------------------------------------------------------------------
