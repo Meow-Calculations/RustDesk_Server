@@ -22,7 +22,7 @@ jobs:
           - aarch64-unknown-linux-gnu
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -93,7 +93,7 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
