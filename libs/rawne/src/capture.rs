@@ -128,10 +128,11 @@ impl CaptureEngine {
         }
     }
 
-    /// 获取当前有效分辨率
     pub fn effective_resolution(&self) -> (u32, u32) {
-        let w = (self.native_width as f64 * self.current_scale) as u32;
-        let h = (self.native_height as f64 * self.current_scale) as u32;
+        // 安全加固 L-05: 浮点转 u32 使用 Rust saturating cast（不会 UB）
+        // 防御性 max(2) 确保不产生零/奇数分辨率
+        let w = ((self.native_width as f64 * self.current_scale) as u32).max(2);
+        let h = ((self.native_height as f64 * self.current_scale) as u32).max(2);
         // 保证是偶数（编码器要求）
         (w & !1, h & !1)
     }

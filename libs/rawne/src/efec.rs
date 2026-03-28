@@ -147,7 +147,11 @@ impl EfecEngine {
         shards: &mut [Vec<u8>],
         data_count: usize,
     ) -> Result<(), String> {
-        let parity_count = shards.len() - data_count;
+        let parity_count = shards.len().checked_sub(data_count)
+            .ok_or_else(|| format!(
+                "数据分片数 ({}) 超过总分片数 ({})，参数非法",
+                data_count, shards.len()
+            ))?;
         if parity_count == 0 {
             return Err("冗余分片数不能为 0".to_string());
         }

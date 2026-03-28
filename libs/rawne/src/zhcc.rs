@@ -10,6 +10,8 @@
 // 兼容性说明：
 //   与 video_qos.rs 的 QualityStatus 互不冲突，可作为更精细的底层信号源。
 
+use std::collections::VecDeque;
+
 use crate::common::{
     NetworkGrade, RttSample, BURST_WINDOW_SIZE, DEFAULT_INIT_FPS, MAX_FPS, STABLE_WINDOW_SIZE,
 };
@@ -33,10 +35,10 @@ const EMA_ALPHA: f64 = 0.3;
 
 /// Z-HCC 拥塞控制引擎
 pub struct ZhccEngine {
-    /// 突发探测窗口（最近 N 个样本）
-    burst_window: Vec<RttSample>,
-    /// 平稳历史窗口（最近 N 个样本）
-    stable_window: Vec<RttSample>,
+    /// 突发探测窗口（最近 N 个样本，使用 VecDeque 实现 O(1) 的头部弹出）
+    burst_window: VecDeque<RttSample>,
+    /// 平稳历史窗口（最近 N 个样本，使用 VecDeque 实现 O(1) 的头部弹出）
+    stable_window: VecDeque<RttSample>,
     /// EMA 平滑后的 RTT（微秒）
     smoothed_rtt_us: f64,
     /// EMA 平滑后的丢包率
@@ -55,8 +57,8 @@ impl ZhccEngine {
     /// 创建 Z-HCC 引擎实例
     pub fn new() -> Self {
         Self {
-            burst_window: Vec::with_capacity(BURST_WINDOW_SIZE),
-            stable_window: Vec::with_capacity(STABLE_WINDOW_SIZE),
+            burst_window: VecDeque::with_capacity(BURST_WINDOW_SIZE),
+            stable_window: VecDeque::with_capacity(STABLE_WINDOW_SIZE),
             smoothed_rtt_us: 0.0,
             smoothed_loss: 0.0,
             smoothed_jitter_us: 0.0,
@@ -119,20 +121,20 @@ impl ZhccEngine {
     // 内部实现
     // -----------------------------------------------------------------------
 
-    /// 将样本滑入突发探测窗口（FIFO，固定容量）
+    /// 将样本滑入突发探测窗口（FIFO，固定容量，O(1) 头部弹出）
     fn push_burst(&mut self, sample: RttSample) {
         if self.burst_window.len() >= BURST_WINDOW_SIZE {
-            self.burst_window.remove(0);
+            self.burst_window.pop_front();
         }
-        self.burst_window.push(sample);
+        self.burst_window.push_back(sample);
     }
 
-    /// 将样本滑入平稳历史窗口（FIFO，固定容量）
+    /// 将样本滑入平稳历史窗口（FIFO，固定容量，O(1) 头部弹出）
     fn push_stable(&mut self, sample: RttSample) {
         if self.stable_window.len() >= STABLE_WINDOW_SIZE {
-            self.stable_window.remove(0);
+            self.stable_window.pop_front();
         }
-        self.stable_window.push(sample);
+        self.stable_window.push_back(sample);
     }
 
     /// 使用指数移动平均 (EMA) 平滑 RTT、丢包率与 Jitter

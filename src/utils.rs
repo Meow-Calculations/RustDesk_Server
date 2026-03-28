@@ -32,41 +32,23 @@ fn gen_keypair() {
     println!("Secret Key:  {secret_key}");
 }
 
+// 安全修复 L-04: 重构为惯用 Rust 的 ? 操作符模式，消除冗余 unwrap
 fn validate_keypair(pk: &str, sk: &str) -> ResultType<()> {
-    let sk1 = base64::decode(sk);
-    if sk1.is_err() {
-        bail!("Invalid secret key");
-    }
-    let sk1 = sk1.unwrap();
+    let sk1 = base64::decode(sk).map_err(|_| anyhow::anyhow!("无效的密钥 (Secret Key)"))?;
+    let secret_key = sign::SecretKey::from_slice(sk1.as_slice())
+        .ok_or_else(|| anyhow::anyhow!("无效的密钥 (Secret Key)"))?;
 
-    let secret_key = sign::SecretKey::from_slice(sk1.as_slice());
-    if secret_key.is_none() {
-        bail!("Invalid Secret key");
-    }
-    let secret_key = secret_key.unwrap();
-
-    let pk1 = base64::decode(pk);
-    if pk1.is_err() {
-        bail!("Invalid public key");
-    }
-    let pk1 = pk1.unwrap();
-
-    let public_key = sign::PublicKey::from_slice(pk1.as_slice());
-    if public_key.is_none() {
-        bail!("Invalid Public key");
-    }
-    let public_key = public_key.unwrap();
+    let pk1 = base64::decode(pk).map_err(|_| anyhow::anyhow!("无效的公钥 (Public Key)"))?;
+    let public_key = sign::PublicKey::from_slice(pk1.as_slice())
+        .ok_or_else(|| anyhow::anyhow!("无效的公钥 (Public Key)"))?;
 
     let random_data_to_test = b"This is meh.";
     let signed_data = sign::sign(random_data_to_test, &secret_key);
-    let verified_data = sign::verify(&signed_data, &public_key);
-    if verified_data.is_err() {
-        bail!("Key pair is INVALID");
-    }
-    let verified_data = verified_data.unwrap();
+    let verified_data = sign::verify(&signed_data, &public_key)
+        .map_err(|_| anyhow::anyhow!("密钥对验证失败 (Key pair is INVALID)"))?;
 
     if random_data_to_test != &verified_data[..] {
-        bail!("Key pair is INVALID");
+        bail!("密钥对验证失败 (Key pair is INVALID)");
     }
 
     Ok(())
@@ -93,9 +75,14 @@ fn doctor_ip(server_ip_address: std::net::IpAddr, server_address: Option<&str>) 
     println!("Is IPV4: {}", server_ip_address.is_ipv4());
     println!("Is IPV6: {}", server_ip_address.is_ipv6());
 
-    // 反向 DNS 查找
-    // TODO: (检查) 在 macOS 上似乎不进行反向查找...
-    let reverse = lookup_addr(&server_ip_address).unwrap();
+    // 安全修复 H-09: DNS 反向查找可能失败，使用优雅错误处理替代 unwrap
+    let reverse = match lookup_addr(&server_ip_address) {
+        Ok(addr) => addr,
+        Err(e) => {
+            println!("反向 DNS 查找失败: {e}");
+            "<unknown>".to_string()
+        }
+    };
     if let Some(server_address) = server_address {
         if reverse == server_address {
             println!("Reverse DNS lookup: '{reverse}' MATCHES server address");
@@ -129,7 +116,14 @@ fn doctor(server_address_unclean: &str) {
         doctor_ip(server_ipaddr, None);
     } else {
         // 传入的字符串不是 IP 地址
-        let ips: Vec<std::net::IpAddr> = lookup_host(server_address).unwrap();
+        // 安全修复 H-09: DNS 正向查找可能失败，使用优雅错误处理替代 unwrap
+        let ips: Vec<std::net::IpAddr> = match lookup_host(server_address) {
+            Ok(ips) => ips,
+            Err(e) => {
+                println!("DNS 查找失败: {e}，请检查域名是否正确");
+                return;
+            }
+        };
         println!("Found {} IP addresses: ", ips.len());
 
         ips.iter().for_each(|ip| println!(" - {ip}"));
